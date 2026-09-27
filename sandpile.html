@@ -1,0 +1,585 @@
+<title>The Sandpile Identity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+<style>
+:root{
+  --ground:#eceef3; --surface:#f7f8fb; --ink:#151a2e; --muted:#586078; --rule:#cfd3de;
+  --accent:#9a6a17; --hot:#c4503a; --good:#2f7d5b;
+  --serif:"Newsreader", "Iowan Old Style", Georgia, serif;
+  --mono:"IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0c1020; --surface:#141a30; --ink:#ece6d6; --muted:#959cb3; --rule:#283051;
+    --accent:#e0b453; --hot:#e67a60; --good:#6cc49b; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0c1020; --surface:#141a30; --ink:#ece6d6; --muted:#959cb3; --rule:#283051;
+  --accent:#e0b453; --hot:#e67a60; --good:#6cc49b; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ground); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.55; padding-inline:20px; padding-block:40px 64px}
+.wrap{max-width:1080px; margin:0 auto; display:flex; flex-direction:column; gap:56px}
+.label{font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+header{display:flex; flex-direction:column; gap:12px; max-width:44rem}
+h1{font-size:clamp(34px,6vw,52px); line-height:1.05; font-weight:500; margin:0; text-wrap:balance; letter-spacing:-.01em}
+h1 em{color:var(--accent)}
+.lede{font-size:20px; margin:0; color:var(--ink); text-wrap:pretty}
+h2{font-size:26px; font-weight:500; margin:0; line-height:1.2; text-wrap:balance}
+h3{font-size:15px; font-family:var(--mono); font-weight:500; margin:0}
+
+/* bench */
+.bench{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:32px; align-items:start}
+@media (max-width:780px){ .bench{grid-template-columns:minmax(0,1fr)} }
+.figure{display:flex; flex-direction:column; gap:10px}
+.stage{aspect-ratio:1; width:100%; max-width:100%; background:#141a33; border:1px solid var(--rule); display:grid; place-items:center; overflow:hidden; position:relative}
+.stage canvas{image-rendering:pixelated; image-rendering:crisp-edges; display:block}
+.readout{position:absolute; left:10px; bottom:10px; font-family:var(--mono); font-size:12px; color:#f6efdc; background:rgba(20,26,51,.8); padding:3px 8px; pointer-events:none}
+.caption{font-size:14px; color:var(--muted); margin:0; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center}
+.sw{display:inline-block; width:11px; height:11px; border:1px solid var(--rule); vertical-align:-1px; margin-right:5px}
+
+.panel{display:flex; flex-direction:column; gap:22px; font-family:var(--mono); font-size:13px}
+.seg{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--rule)}
+.seg button{font:inherit; background:transparent; color:var(--muted); border:0; padding:9px 6px; cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--ground)}
+.field{display:flex; flex-direction:column; gap:6px}
+.field .row{display:flex; justify-content:space-between; align-items:baseline}
+.field output{color:var(--ink); font-variant-numeric:tabular-nums}
+input[type=range]{width:100%; accent-color:var(--accent)}
+.presets{display:flex; flex-wrap:wrap; gap:6px}
+.presets button, .btn{font:inherit; background:var(--surface); color:var(--ink); border:1px solid var(--rule); padding:5px 10px; cursor:pointer}
+.presets button:hover, .btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--ground)}
+.btn:disabled{opacity:.5; cursor:default}
+button:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.check{display:flex; gap:8px; align-items:center; color:var(--muted)}
+.status{color:var(--muted); min-height:3.2em; line-height:1.6}
+.status b{color:var(--ink); font-weight:500}
+table{border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums}
+td,th{padding:5px 0; text-align:right; border-bottom:1px solid var(--rule); font-weight:400}
+th{color:var(--muted); font-size:11px; letter-spacing:.06em; text-transform:uppercase}
+td:first-child, th:first-child{text-align:left}
+.bar{display:block; height:4px; background:var(--accent); margin-top:3px; opacity:.8}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 12px}
+.kv dt{color:var(--muted)} .kv dd{margin:0; text-align:right; font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+
+/* verify */
+.verify{display:flex; flex-direction:column; gap:18px; border-top:1px solid var(--rule); padding-top:32px}
+.verify p{margin:0; max-width:40rem}
+.trio{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; align-items:end}
+@media (max-width:520px){ .trio{grid-template-columns:minmax(0,1fr)} }
+.trio figure{margin:0; display:flex; flex-direction:column; gap:6px}
+.trio .mini{aspect-ratio:1; background:#141a33; border:1px solid var(--rule); display:grid; place-items:center; overflow:hidden}
+.trio canvas{image-rendering:pixelated; display:block; max-width:100%; max-height:100%}
+.trio figcaption{font-family:var(--mono); font-size:12px; color:var(--muted)}
+.op{font-family:var(--mono)}
+.verdict{font-family:var(--mono); font-size:14px; min-height:1.5em}
+.verdict.ok{color:var(--good)} .verdict.bad{color:var(--hot)}
+
+/* essay */
+article{display:flex; flex-direction:column; gap:36px; border-top:1px solid var(--rule); padding-top:40px}
+article section{display:flex; flex-direction:column; gap:12px; max-width:38rem}
+article p{margin:0}
+code, .math{font-family:var(--mono); font-size:.86em; background:var(--surface); padding:1px 5px; border:1px solid var(--rule)}
+.sources{font-size:15px; color:var(--muted); display:flex; flex-direction:column; gap:10px; max-width:44rem}
+.sources ol{margin:0; padding-left:1.3em; display:flex; flex-direction:column; gap:6px}
+a{color:var(--accent)}
+footer{font-family:var(--mono); font-size:12px; color:var(--muted)}
+
+/* notebook: findings from my own computations */
+.notebook{display:flex; flex-direction:column; gap:36px; border-top:1px solid var(--rule); padding-top:40px}
+.notebook > header{max-width:40rem}
+.notebook section{display:flex; flex-direction:column; gap:14px}
+.notebook h3{font-family:var(--serif); font-size:22px; font-weight:500; line-height:1.25; text-wrap:balance}
+.notebook section > p, .notebook section > ol{margin:0; max-width:38rem}
+.notebook ol{padding-left:1.3em; display:flex; flex-direction:column; gap:6px}
+.pair{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; max-width:640px}
+.pair figure{margin:0; display:flex; flex-direction:column; gap:6px}
+.pair .mini{aspect-ratio:1; background:#141a33; border:1px solid var(--rule); display:grid; place-items:center; overflow:hidden}
+.pair canvas{image-rendering:pixelated; display:block}
+.pair figcaption{font-family:var(--mono); font-size:12px; color:var(--muted)}
+.pairctl{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; font-family:var(--mono); font-size:13px; max-width:640px}
+.pairctl input{flex:1 1 180px}
+.chartbox{position:relative; max-width:720px; overflow-x:auto}
+.chartbox svg{display:block; width:100%; min-width:320px; height:auto; font-family:var(--mono); font-size:11px}
+.chartbox .grid{stroke:var(--rule); stroke-width:1}
+.chartbox .tick{fill:var(--muted)}
+.chartbox .ref{stroke:var(--muted); stroke-width:1.5; stroke-dasharray:5 4}
+.chartbox .reflabel{fill:var(--muted)}
+.chartbox .dot{fill:var(--accent); stroke:var(--ground); stroke-width:1}
+.chartbox .big{fill:var(--accent); stroke:var(--ground); stroke-width:2}
+.chartbox .biglabel{fill:var(--ink)}
+.chartbox .hl{fill:none; stroke:var(--ink); stroke-width:1.5}
+.tip{position:absolute; pointer-events:none; background:var(--surface); color:var(--ink); border:1px solid var(--rule); font-family:var(--mono); font-size:12px; padding:5px 8px; white-space:nowrap; font-variant-numeric:tabular-nums}
+details{font-family:var(--mono); font-size:12px; color:var(--muted); max-width:720px}
+details summary{cursor:pointer}
+.datagrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:2px 16px; margin-top:8px; font-variant-numeric:tabular-nums}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="label">Abelian sandpile · square grid</span>
+    <h1>The Sandpile <em>Identity</em></h1>
+    <p class="lede">Every stable pile of sand on a grid belongs to a group, and that group has an identity element. The identity is the pile that changes nothing when you add it. It turns out to be this, and why it looks this way is still an open question.</p>
+  </header>
+
+  <div class="bench">
+    <div class="figure">
+      <div class="stage" id="stage"><canvas id="cv" width="128" height="128"></canvas><span class="readout" id="readout" hidden></span></div>
+      <p class="caption">
+        <span><i class="sw" style="background:#141a33"></i>0 grains</span>
+        <span><i class="sw" style="background:#4f79a8"></i>1</span>
+        <span><i class="sw" style="background:#d9a741"></i>2</span>
+        <span><i class="sw" style="background:#f6efdc"></i>3</span>
+        <span><i class="sw" style="background:#e0664f"></i>4 or more, about to topple</span>
+      </p>
+    </div>
+
+    <div class="panel">
+      <div class="seg" role="group" aria-label="What to compute">
+        <button id="m-id" aria-pressed="true">Identity</button>
+        <button id="m-src" aria-pressed="false">Single pile</button>
+      </div>
+
+      <div id="ctl-id" class="panel" style="gap:16px">
+        <div class="field">
+          <div class="row"><label for="w">Width</label><output id="wo">128</output></div>
+          <input type="range" id="w" min="8" max="256" value="128">
+        </div>
+        <div class="field">
+          <div class="row"><label for="h">Height</label><output id="ho">128</output></div>
+          <input type="range" id="h" min="8" max="256" value="128">
+        </div>
+        <label class="check"><input type="checkbox" id="lock" checked> Keep it square</label>
+        <div class="presets" aria-label="Grid size presets">
+          <button data-n="32">32</button><button data-n="64">64</button><button data-n="128">128</button><button data-n="200">200</button><button data-n="256">256</button><button data-rect="1">256×96</button>
+        </div>
+      </div>
+
+      <div id="ctl-src" class="panel" style="gap:16px" hidden>
+        <div class="field">
+          <div class="row"><label for="k">Grains on the centre cell</label><output id="ko">16,384</output></div>
+          <input type="range" id="k" min="10" max="16" value="14">
+        </div>
+      </div>
+
+      <div class="status" id="status">Starting…</div>
+      <button class="btn" id="replay">Watch it settle again</button>
+
+      <table id="tbl">
+        <thead><tr><th>Height</th><th>Cells</th><th>Share</th></tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+      <dl class="kv" id="kv"></dl>
+    </div>
+  </div>
+
+  <section class="verify" id="verify">
+    <h2>Check that it really is the identity</h2>
+    <p>Build a random recurrent pile <span class="op">x</span> on the same grid, add the identity <span class="op">e</span> to it cell by cell, and let everything topple. If <span class="op">e</span> is the identity, you get <span class="op">x</span> back exactly, even though thousands of cells go unstable on the way.</p>
+    <div><button class="btn primary" id="vbtn" disabled>Add e to a random pile</button></div>
+    <div class="trio">
+      <figure><div class="mini"><canvas id="vx" width="1" height="1"></canvas></div><figcaption>x · random recurrent pile</figcaption></figure>
+      <figure><div class="mini"><canvas id="ve" width="1" height="1"></canvas></div><figcaption>e · the identity</figcaption></figure>
+      <figure><div class="mini"><canvas id="vr" width="1" height="1"></canvas></div><figcaption>stab(x + e)</figcaption></figure>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </section>
+
+  <article>
+    <section>
+      <h2>The rule</h2>
+      <p>Each cell of a grid holds some grains of sand. A cell with four or more grains is unstable. It topples: it loses four grains and gives one to each of its four neighbours. Grains pushed off the edge of the grid are gone for good, so every avalanche ends eventually.</p>
+      <p>The order in which you topple cells makes no difference to the final pile or to how many times each cell topples. Deepak Dhar proved this in 1990, and it is why the model is called <i>abelian</i>. It is also why the picture above can be computed with a simple stack of unstable cells in whatever order is convenient.</p>
+    </section>
+    <section>
+      <h2>Adding piles</h2>
+      <p>To add two stable piles, stack them cell by cell and topple until nothing is unstable. Some stable piles can never be reached again once the sand starts flowing. Leave those out, and the ones that remain, called <i>recurrent</i>, form a finite group under this addition.</p>
+      <p>The size of that group equals the number of spanning trees of the grid when its whole border is wired to one extra sink vertex. For an <span class="math">m×n</span> grid it is the product of <span class="math">4 − 2cos(jπ/(m+1)) − 2cos(kπ/(n+1))</span> over all <span class="math">j ≤ m, k ≤ n</span>. The panel above shows it for the grid you picked. On a 2×2 grid there are 192 recurrent piles. On 256×256 the count has tens of thousands of digits.</p>
+    </section>
+    <section>
+      <h2>Finding the identity</h2>
+      <p>You might expect the identity to be the empty pile. It is not, because the empty pile is not recurrent. A recipe that works on any grid: fill every cell with 6 grains, stabilize, and subtract the result from 6. Then stabilize that difference.</p>
+      <p>The difference is equivalent to the empty pile, since subtracting a pile from its own stabilization only undoes topplings. It also has at least 3 grains everywhere, which is enough to guarantee the result is recurrent. The group has exactly one recurrent pile that is equivalent to nothing, and that pile is the identity. The page runs both stages live, and the coral fronts you see are the avalanches.</p>
+    </section>
+    <section>
+      <h2>What is still unexplained</h2>
+      <p>Look at the identity at 64, 128 and 256 cells. The same shape appears each time with finer detail: a solid square of 2s in the middle, cusped regions of 3s around it, and patches of periodic texture that meet along sharp lines. It looks like a picture converging to a limit.</p>
+      <p>In their 2017 survey, Levine and Peres list understanding the scaling limit of the sandpile identity as an open problem, solved in a special case by Caracciolo, Paoletti and Sportiello. On fractal graphs such as the Sierpiński gasket the question has been settled. Kaiser and Sava-Huss proved in 2023 that the identity averages out to a constant there. On the ordinary square grid, the picture above is still ahead of the proofs.</p>
+    </section>
+    <section>
+      <h2>The same textures elsewhere</h2>
+      <p>Switch to <b>Single pile</b> and drop tens of thousands of grains on one cell. The result is a rounded blob made from the same kinds of periodic patches. Pegden and Smart proved in 2013 that this pile has a scaling limit. Levine, Pegden and Smart then showed that the periodic patterns in that limit are organized by an Apollonian circle packing. Similar patches cover much of the identity, so it is tempting to think the two pictures have a common explanation. That link has not been proved.</p>
+    </section>
+    <div class="sources">
+      <span class="label">Sources</span>
+      <ol>
+        <li>D. Dhar, “Self-organized critical state of sandpile automaton models,” <i>Phys. Rev. Lett.</i> 64 (1990) 1613–1616.</li>
+        <li>Y. Le Borgne and D. Rossin, “On the identity of the sandpile group,” <i>Discrete Math.</i> 256 (2002) 775–790.</li>
+        <li>S. Caracciolo, G. Paoletti and A. Sportiello, “Explicit characterization of the identity configuration in an abelian sandpile model,” <i>J. Phys. A</i> 41 (2008) 495003.</li>
+        <li>W. Pegden and C. K. Smart, “Convergence of the abelian sandpile,” <i>Duke Math. J.</i> 162 (2013).</li>
+        <li>L. Levine, W. Pegden and C. K. Smart, “Apollonian structure in the Abelian sandpile,” <i>Geom. Funct. Anal.</i> 26 (2016) 306–336. <a href="https://arxiv.org/abs/1208.4839">arXiv:1208.4839</a></li>
+        <li>L. Levine and Y. Peres, “Laplacian growth, sandpiles and scaling limits,” <i>Bull. AMS</i> (2017). <a href="https://arxiv.org/abs/1611.00411">arXiv:1611.00411</a></li>
+        <li>L. Florescu, D. Morar, D. Perkinson, N. Salter and T. Xu, “Sandpiles and dominos” (2014). <a href="https://arxiv.org/abs/1406.0100">arXiv:1406.0100</a></li>
+        <li>R. Kaiser and E. Sava-Huss, “Scaling limit of the sandpile identity element on the Sierpinski gasket” (2023). <a href="https://arxiv.org/abs/2308.12183">arXiv:2308.12183</a></li>
+      </ol>
+    </div>
+  </article>
+
+  <div class="notebook">
+    <header>
+      <span class="label">Notebook · 27 September 2026</span>
+      <h2>Two things a longer look turned up</h2>
+      <p style="margin:0">These come from my own computations with a C version of the same toppling code, not from the papers cited above. I have not found either one in the literature, though they may well be known.</p>
+    </header>
+
+    <section>
+      <h3>Odd grids contain the even grid one size down</h3>
+      <p>On a grid with an odd side, the identity has a cross of smaller values along its middle row and column, with a single empty cell at the centre. Delete that cross and push the four quarters together. What remains is exactly the identity of the even grid one size smaller, cell for cell. I checked every odd size from 5 to 257 and found no exceptions. You can check any size up to 129 here.</p>
+      <div class="pairctl">
+        <label for="pk">Pair</label>
+        <input type="range" id="pk" min="4" max="64" value="31">
+        <output id="pko">62 and 63</output>
+      </div>
+      <div class="pair">
+        <figure><div class="mini"><canvas id="pe" width="1" height="1"></canvas></div><figcaption id="pec">even</figcaption></figure>
+        <figure><div class="mini"><canvas id="po" width="1" height="1"></canvas></div><figcaption id="poc">odd</figcaption></figure>
+      </div>
+      <div class="verdict" id="pverdict"></div>
+      <p>Here is how far I can explain it. Computing the even identity also tells you how many times each cell toppled on net. Build a pile on the odd grid by giving the four quarters those same counts and letting each cross cell copy its neighbour's count. That pile differs from the empty pile only by topplings, and in the quarters it holds exactly the even identity. On the cross it holds the second difference of the counts along the row beside the midline, and at the centre it holds 0. If those cross values stay between 1 and 3, the pile is stable and also recurrent. The recurrence argument folds the grid along its mirror lines, as Florescu, Morar, Perkinson, Salter and Xu do for symmetric sandpiles. A stable, recurrent pile that differs from the empty pile only by topplings has to be the identity.</p>
+      <p>The missing piece is that bound on the toppling counts. For every odd size from 5 to 129 I computed them directly: they are always 1 or 2, and they match the real identity's cross exactly. Proving the bound would need control of the toppling counts, which is the same kind of problem that keeps the scaling limit open.</p>
+      <p>Rectangles show that the bound is doing real work. Take a rectangle with an odd width, delete its middle column, and compare with the rectangle one column narrower. The two identities match on every height up to about 1.4 times the width and differ on every height beyond it. Where they differ, the construction above is what breaks. The values it puts on the middle column drop to 0 in two places with only 1s between them, and that stretch stops its pile from being recurrent. Checking for that pattern predicted the outcome correctly for all 900 rectangles I tested. So symmetry alone cannot prove the square case. A proof has to show that squares stay on the safe side of this threshold.</p>
+      <p>Le Borgne and Rossin’s method gives a sharper way to state what is missing. They start from an explicit pile that differs from the empty pile only by topplings: 2 grains on every cell, plus tall stacks along the four corner diagonals. Stabilizing it produces the identity. Rebuilt here, their avalanche reproduces the identity exactly, and the missing bound turns into a statement about how often its cells topple. On the row beside the midline those counts would need to be concave, with the slope never dropping by more than 1 from one cell to the next. On a 32-wide grid the counts along that row are 8, 15, 22, …, 71, then 77, 82, 86, 89, 91, 92. The slope stays at 7 and then drops by exactly 1 at each step. That pattern holds on every even size from 4 to 128, and it would be enough to finish the proof.</p>
+      <p>I could not prove it. Their own arguments show that toppling counts decrease along lines, which is a first-order fact. Concavity is second-order, and rounding down to whole topplings can break it, so their step-by-step induction does not carry over. The pattern also appears on this one row only, where the avalanches from the top-left and bottom-left corners meet head-on. Every other row is irregular, so there is no grid-wide property to build an induction on. Closing the gap would take an exact description of that collision.</p>
+    </section>
+
+    <section>
+      <h3>The square takes up 5/12 of the width</h3>
+      <p>On even grids the central square of 2s grows in proportion to the width. Across every even width from 8 to 256, plus 512 and 1024, its side is close to <span class="math">5n/12 + 0.6</span>. The ratio wobbles because the side only grows in steps of 2, but it closes in on 5/12 as the grid grows.</p>
+      <div class="chartbox" id="chartbox">
+        <svg id="chart" viewBox="0 0 680 300" role="img" aria-labelledby="chart-t">
+          <title id="chart-t">Side of the central square divided by grid width, for even widths 8 to 1024, approaching 5/12</title>
+        </svg>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <p>The obvious rival guess is √2 − 1 ≈ 0.4142. Compare how far each slope misses the measured sides. With 5/12 the average miss stays flat, +0.60 cells on widths 16 to 128 and +0.62 cells on widths 130 to 512. With √2 − 1 it grows from +0.77 to +1.10 as the grid gets bigger, so that line drifts away from the data. At 1024 the measured side is 428. The 5/12 line predicts about 427, and sides are always even. The √2 − 1 line would miss by almost 4 cells. This is a numerical fit, not a proof. Some sizes also carry one-off details: at 512 a faint octagon of 2s surrounds the square, and it is gone again at 1024.</p>
+      <details>
+        <summary>Show the measurements</summary>
+        <div class="datagrid" id="datagrid"></div>
+      </details>
+    </section>
+  </div>
+
+  <footer>All sand is toppled live in your browser. Grids up to 256×256 take a few seconds.</footer>
+</div>
+
+<script>
+(() => {
+  const PAL = [[20,26,51],[79,121,168],[217,167,65],[246,239,220],[224,102,79]];
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const BUDGET = 2500000;
+  const $ = id => document.getElementById(id);
+  const fmt = n => n.toLocaleString('en-US');
+
+  // ---------- drawing ----------
+  function paint(canvas, z, W, H) {
+    if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(W, H), d = img.data;
+    for (let i = 0; i < W * H; i++) {
+      const c = PAL[z[i] > 4 ? 4 : z[i] < 0 ? 0 : z[i]];
+      d[4*i] = c[0]; d[4*i+1] = c[1]; d[4*i+2] = c[2]; d[4*i+3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  function fit(canvas, box, W, H) {
+    // Snap to whole device pixels per cell so periodic textures stay regular.
+    const dpr = devicePixelRatio || 1, room = Math.max(1, box.clientWidth - 2) * dpr, n = Math.max(W, H);
+    const s = (room >= n ? Math.floor(room / n) : room / n) / dpr;
+    canvas.style.width = (W * s) + 'px';
+    canvas.style.height = (H * s) + 'px';
+  }
+
+  // ---------- toppling: resumable, one yield per budget chunk ----------
+  let topples = 0;
+  function* stabilize(z, W, H) {
+    const N = W * H, stack = new Int32Array(N), inS = new Uint8Array(N);
+    let sp = 0;
+    for (let i = 0; i < N; i++) if (z[i] >= 4) { stack[sp++] = i; inS[i] = 1; }
+    while (sp > 0) {
+      let b = BUDGET;
+      while (sp > 0 && b-- > 0) {
+        const i = stack[--sp]; inS[i] = 0;
+        const q = z[i] >> 2; if (q === 0) continue;
+        z[i] -= q << 2; topples += q;
+        const x = i % W;
+        let j;
+        if (x > 0)     { j = i - 1; z[j] += q; if (z[j] >= 4 && !inS[j]) { inS[j] = 1; stack[sp++] = j; } }
+        if (x < W - 1) { j = i + 1; z[j] += q; if (z[j] >= 4 && !inS[j]) { inS[j] = 1; stack[sp++] = j; } }
+        if (i >= W)    { j = i - W; z[j] += q; if (z[j] >= 4 && !inS[j]) { inS[j] = 1; stack[sp++] = j; } }
+        if (i < N - W) { j = i + W; z[j] += q; if (z[j] >= 4 && !inS[j]) { inS[j] = 1; stack[sp++] = j; } }
+      }
+      if (sp > 0) yield;
+    }
+  }
+
+  // ---------- job runner ----------
+  let job = null;
+  function run(gen) {
+    if (job) job.cancelled = true;
+    const j = { cancelled: false }; job = j;
+    const step = () => {
+      if (j.cancelled) return;
+      if (!gen.next().done) requestAnimationFrame(step);
+      else if (job === j) job = null;
+    };
+    requestAnimationFrame(step);
+  }
+
+  // ---------- state ----------
+  const cv = $('cv'), stage = $('stage');
+  let mode = 'id';
+  let cur = null;       // {W,H,z} shown on the main canvas
+  let identity = null;  // {W,H,z}
+
+  function status(html) { $('status').innerHTML = html; }
+
+  function showStats(z, W, H, extra) {
+    const c = [0,0,0,0]; let sum = 0;
+    for (let i = 0; i < W*H; i++) { c[z[i]]++; sum += z[i]; }
+    const N = W*H, max = Math.max(...c);
+    $('tb').innerHTML = c.map((n, h) => `<tr><td><i class="sw" style="background:rgb(${PAL[h]})"></i>${h}</td><td>${fmt(n)}<span class="bar" style="width:${(n/max*100).toFixed(1)}%;margin-left:auto"></span></td><td>${(n/N*100).toFixed(1)}%</td></tr>`).join('');
+    const rows = [['Mean height', (sum/N).toFixed(3)], ...extra];
+    $('kv').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  }
+
+  function groupOrder(W, H) {
+    let lg = 0;
+    for (let j = 1; j <= W; j++) {
+      const a = 4 - 2*Math.cos(j*Math.PI/(W+1));
+      for (let k = 1; k <= H; k++) lg += Math.log10(a - 2*Math.cos(k*Math.PI/(H+1)));
+    }
+    const e = Math.floor(lg), m = Math.pow(10, lg - e);
+    if (e < 9) return fmt(Math.round(Math.pow(10, lg)));
+    return `${m.toFixed(2)} × 10<sup>${fmt(e)}</sup>`;
+  }
+
+  function* identityJob(W, H, animate) {
+    const t0 = performance.now(); topples = 0;
+    identity = null; $('vbtn').disabled = true;
+    const z = new Int32Array(W*H).fill(6);
+    cur = { W, H, z }; fit(cv, stage, W, H);
+    status(`<b>Stage 1 of 2</b> · every cell starts with 6 grains`);
+    paint(cv, z, W, H); yield;
+    for (const _ of stabilize(z, W, H)) {
+      if (animate) paint(cv, z, W, H);
+      status(`<b>Stage 1 of 2</b> · stabilizing 6 everywhere<br>${fmt(topples)} topples`);
+      yield;
+    }
+    for (let i = 0; i < W*H; i++) z[i] = 6 - z[i];
+    paint(cv, z, W, H);
+    status(`<b>Stage 2 of 2</b> · 6 minus that result`);
+    yield;
+    for (const _ of stabilize(z, W, H)) {
+      if (animate) paint(cv, z, W, H);
+      status(`<b>Stage 2 of 2</b> · stabilizing the difference<br>${fmt(topples)} topples`);
+      yield;
+    }
+    paint(cv, z, W, H);
+    const secs = ((performance.now() - t0) / 1000).toFixed(2);
+    status(`<b>Identity of the ${W}×${H} grid</b><br>${fmt(topples)} topples in ${secs} s`);
+    identity = { W, H, z: z.slice() };
+    showStats(z, W, H, [['Cells', fmt(W*H)], ['Group size', groupOrder(W, H)]]);
+    $('vbtn').disabled = false;
+    $('verdict').textContent = ''; $('verdict').className = 'verdict';
+    paint($('ve'), identity.z, W, H); fitMini();
+  }
+
+  function* sourceJob(k, animate) {
+    const t0 = performance.now(); topples = 0;
+    const n = 2 ** k, r = Math.ceil(Math.sqrt(n / 2.1 / Math.PI)) + 4, W = 2*r + 1, H = W;
+    const z = new Int32Array(W*H); z[r*W + r] = n;
+    cur = { W, H, z }; fit(cv, stage, W, H);
+    paint(cv, z, W, H); yield;
+    for (const _ of stabilize(z, W, H)) {
+      if (animate) paint(cv, z, W, H);
+      status(`<b>Toppling ${fmt(n)} grains</b><br>${fmt(topples)} topples`);
+      yield;
+    }
+    paint(cv, z, W, H);
+    let rad = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (z[y*W+x]) rad = Math.max(rad, Math.hypot(x - r, y - r));
+    const secs = ((performance.now() - t0) / 1000).toFixed(2);
+    status(`<b>${fmt(n)} grains from one cell</b><br>${fmt(topples)} topples in ${secs} s`);
+    showStats(z, W, H, [['Grains', fmt(n)], ['Radius', `${rad.toFixed(1)} cells`], ['Grid', `${W}×${H}`]]);
+  }
+
+  function* verifyJob() {
+    const { W, H, z: e } = identity;
+    $('vbtn').disabled = true; $('verdict').className = 'verdict';
+    $('verdict').textContent = 'Building a random recurrent pile…';
+    const x = new Int32Array(W*H);
+    for (let i = 0; i < W*H; i++) x[i] = 3 + Math.floor(Math.random() * 4);
+    topples = 0;
+    yield* stabilize(x, W, H);
+    paint($('vx'), x, W, H);
+    const y = new Int32Array(W*H);
+    let unstable = 0;
+    for (let i = 0; i < W*H; i++) { y[i] = x[i] + e[i]; if (y[i] >= 4) unstable++; }
+    $('verdict').textContent = `Added e: ${fmt(unstable)} cells are now unstable. Toppling…`;
+    topples = 0;
+    for (const _ of stabilize(y, W, H)) { paint($('vr'), y, W, H); yield; }
+    paint($('vr'), y, W, H); fitMini();
+    let diff = 0;
+    for (let i = 0; i < W*H; i++) if (x[i] !== y[i]) diff++;
+    if (diff === 0) {
+      $('verdict').className = 'verdict ok';
+      $('verdict').textContent = `x came back unchanged. ${fmt(unstable)} cells went unstable and ${fmt(topples)} topples later, all ${fmt(W*H)} cells match.`;
+    } else {
+      $('verdict').className = 'verdict bad';
+      $('verdict').textContent = `${fmt(diff)} cells differ. This should not happen; please report it.`;
+    }
+    $('vbtn').disabled = false;
+  }
+
+  function fitMini() {
+    if (!identity) return;
+    for (const id of ['vx', 've', 'vr']) fit($(id), $(id).parentElement, identity.W, identity.H);
+  }
+
+  // ---------- controls ----------
+  const w = $('w'), h = $('h'), lock = $('lock'), k = $('k');
+  let debounce = 0;
+  function start(animate = !reduceMotion) {
+    clearTimeout(debounce);
+    if (mode === 'id') run(identityJob(+w.value, +h.value, animate));
+    else run(sourceJob(+k.value, animate));
+  }
+  function later() { clearTimeout(debounce); debounce = setTimeout(start, 180); }
+  function syncLabels() {
+    $('wo').textContent = w.value; $('ho').textContent = h.value;
+    $('ko').textContent = fmt(2 ** +k.value);
+  }
+  w.addEventListener('input', () => { if (lock.checked) h.value = w.value; syncLabels(); later(); });
+  h.addEventListener('input', () => { if (lock.checked) w.value = h.value; syncLabels(); later(); });
+  lock.addEventListener('change', () => { if (lock.checked && w.value !== h.value) { h.value = w.value; syncLabels(); later(); } });
+  k.addEventListener('input', () => { syncLabels(); later(); });
+  document.querySelectorAll('.presets button').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.rect) { lock.checked = false; w.value = 256; h.value = 96; }
+    else { w.value = h.value = b.dataset.n; }
+    syncLabels(); start();
+  }));
+  function setMode(m) {
+    mode = m;
+    $('m-id').setAttribute('aria-pressed', m === 'id');
+    $('m-src').setAttribute('aria-pressed', m === 'src');
+    $('ctl-id').hidden = m !== 'id'; $('ctl-src').hidden = m !== 'src';
+    $('verify').hidden = m !== 'id';
+    start();
+  }
+  $('m-id').addEventListener('click', () => setMode('id'));
+  $('m-src').addEventListener('click', () => setMode('src'));
+  $('replay').addEventListener('click', () => start(true));
+  $('vbtn').addEventListener('click', () => { if (identity) run(verifyJob()); });
+
+  stage.addEventListener('mousemove', ev => {
+    if (!cur) return;
+    const r = cv.getBoundingClientRect();
+    const x = Math.floor((ev.clientX - r.left) / r.width * cur.W), y = Math.floor((ev.clientY - r.top) / r.height * cur.H);
+    const ro = $('readout');
+    if (x < 0 || y < 0 || x >= cur.W || y >= cur.H) { ro.hidden = true; return; }
+    ro.hidden = false;
+    ro.textContent = `cell (${x}, ${y}) · ${cur.z[y*cur.W + x]} grains`;
+  });
+  stage.addEventListener('mouseleave', () => { $('readout').hidden = true; });
+  // ---------- notebook: odd grid vs the even grid one size down ----------
+  function identitySync(W, H) {
+    const z = new Int32Array(W*H).fill(6);
+    for (const _ of stabilize(z, W, H));
+    for (let i = 0; i < W*H; i++) z[i] = 6 - z[i];
+    for (const _ of stabilize(z, W, H));
+    return z;
+  }
+  const pk = $('pk');
+  let pairTimer = 0;
+  function fitPair() {
+    const k = +pk.value;
+    fit($('pe'), $('pe').parentElement, 2*k, 2*k);
+    fit($('po'), $('po').parentElement, 2*k + 1, 2*k + 1);
+  }
+  function showPair() {
+    const k = +pk.value, m = 2*k, n = m + 1;
+    const ee = identitySync(m, m), eo = identitySync(n, n);
+    paint($('pe'), ee, m, m); paint($('po'), eo, n, n); fitPair();
+    $('pko').textContent = `${m} and ${n}`;
+    $('pec').textContent = `${m}×${m}`;
+    $('poc').textContent = `${n}×${n}, cross on row and column ${k}`;
+    let diff = 0;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      if (y === k || x === k) continue;
+      if (eo[y*n + x] !== ee[(y - (y > k))*m + (x - (x > k))]) diff++;
+    }
+    const v = $('pverdict');
+    v.className = 'verdict ' + (diff ? 'bad' : 'ok');
+    v.textContent = diff
+      ? `${fmt(diff)} of ${fmt(m*m)} cells differ from the ${m}×${m} identity.`
+      : `With the cross removed, all ${fmt(m*m)} cells match the ${m}×${m} identity.`;
+  }
+  pk.addEventListener('input', () => {
+    $('pko').textContent = `${2*pk.value} and ${2*pk.value + 1}`;
+    clearTimeout(pairTimer); pairTimer = setTimeout(showPair, 120);
+  });
+
+  // ---------- notebook: centre square size ----------
+  // [even width n, side of the centre square of 2s], from tools/sandid.c
+  const PTS = [[8,4],[10,4],[12,6],[14,6],[16,8],[18,8],[20,8],[22,10],[24,10],[26,12],[28,12],[30,14],[32,14],[34,16],[36,16],[38,16],[40,18],[42,18],[44,18],[46,20],[48,20],[50,22],[52,22],[54,22],[56,24],[58,24],[60,26],[62,26],[64,28],[66,28],[68,30],[70,30],[72,30],[74,32],[76,32],[78,32],[80,34],[82,34],[84,36],[86,36],[88,38],[90,38],[92,40],[94,40],[96,40],[98,42],[100,42],[102,44],[104,44],[106,44],[108,46],[110,46],[112,46],[114,48],[116,48],[118,50],[120,50],[122,52],[124,52],[126,54],[128,54],[130,54],[132,56],[134,56],[136,56],[138,58],[140,58],[142,60],[144,60],[146,62],[148,62],[150,64],[152,64],[154,64],[156,66],[158,66],[160,68],[162,68],[164,68],[166,70],[168,70],[170,72],[172,72],[174,74],[176,74],[178,74],[180,76],[182,76],[184,78],[186,78],[188,80],[190,80],[192,80],[194,82],[196,82],[198,84],[200,84],[202,86],[204,86],[206,86],[208,88],[210,88],[212,88],[214,90],[216,90],[218,92],[220,92],[222,94],[224,94],[226,96],[228,96],[230,96],[232,98],[234,98],[236,98],[238,100],[240,100],[242,102],[244,102],[246,102],[248,104],[250,104],[252,106],[254,106],[256,108],[512,214],[1024,428]];
+  function drawChart() {
+    const svg = $('chart');
+    const W = 680, H = 300, L = 50, R = 58, T = 22, B = 44;
+    const x = n => L + (Math.log2(n) - 3) / 7.35 * (W - L - R);
+    const y = v => T + (0.51 - v) / 0.12 * (H - T - B);
+    let s = '';
+    for (const v of [0.40, 0.42, 0.44, 0.46, 0.48, 0.50])
+      s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(2)}</text>`;
+    for (let e = 3; e <= 10; e++)
+      s += `<text class="tick" x="${x(2 ** e)}" y="${H - B + 18}" text-anchor="middle">${2 ** e}</text>`;
+    s += `<text class="tick" x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">grid width (log scale)</text>`;
+    s += `<text class="tick" x="${L - 36}" y="${T - 10}">side ÷ width</text>`;
+    s += `<line class="ref" x1="${L}" x2="${W - R}" y1="${y(5/12)}" y2="${y(5/12)}"/><text class="reflabel" x="${W - R + 8}" y="${y(5/12) + 4}">5/12</text>`;
+    for (const [n, sq] of PTS) {
+      const big = n >= 512;
+      s += `<circle class="${big ? 'big' : 'dot'}" cx="${x(n)}" cy="${y(sq / n)}" r="${big ? 5 : 3.5}"/>`;
+      if (big) s += `<text class="biglabel" x="${x(n)}" y="${y(sq / n) - 11}" text-anchor="middle">${sq}/${n}</text>`;
+    }
+    s += `<circle class="hl" id="hl" r="7" cx="-20" cy="-20"/>`;
+    svg.insertAdjacentHTML('beforeend', s);
+
+    const tip = $('tip'), hl = $('hl'), box = $('chartbox');
+    svg.addEventListener('pointermove', ev => {
+      const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * W;
+      let best = PTS[0], bd = Infinity;
+      for (const p of PTS) { const d = Math.abs(x(p[0]) - px); if (d < bd) { bd = d; best = p; } }
+      const [n, sq] = best, cx = x(n), cy = y(sq / n);
+      hl.setAttribute('cx', cx); hl.setAttribute('cy', cy);
+      tip.hidden = false;
+      tip.textContent = `width ${n} · side ${sq} · ${(sq / n).toFixed(4)}`;
+      const sx = r.width / W, left = r.left - box.getBoundingClientRect().left + box.scrollLeft;
+      tip.style.left = Math.min(left + cx * sx + 10, box.scrollWidth - tip.offsetWidth - 4) + 'px';
+      tip.style.top = (cy * sx - 36) + 'px';
+    });
+    svg.addEventListener('pointerleave', () => { tip.hidden = true; hl.setAttribute('cx', -20); });
+
+    $('datagrid').innerHTML = PTS.map(([n, sq]) => `<span>${n}: ${sq} (${(sq / n).toFixed(3)})</span>`).join('');
+  }
+
+  addEventListener('resize', () => { if (cur) fit(cv, stage, cur.W, cur.H); fitMini(); fitPair(); });
+
+  syncLabels();
+  start();
+  showPair();
+  drawChart();
+})();
+</script>
