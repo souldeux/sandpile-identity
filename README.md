@@ -120,6 +120,14 @@ other row the second differences range from about −m to +2 (m = 32, 64, 128), 
 grid-wide invariant to induct on. The row is where the top-left and bottom-left avalanches meet
 head-on, and a proof would need an exact description of that collision.
 
+### Third attempt at a full proof
+
+See **`PROOF-NOTES.md`**. New and rigorous: the claim is *equivalent* to two one-sided statements,
+(U) on the even grid and (M) on the odd grid, via the least action principle applied in both
+directions to explicit Le Borgne–Rossin start piles. Each reduces to an avalanche invariant that
+holds at every round in all tested sizes, one of them tight (E(d) ≤ 2(k − d) − 1). The inductions
+don't close yet: each step needs gradient bounds next to the diagonal.
+
 ### The central square is about 5/12 of the width
 
 For even n the side of the centred all-2 square grows in steps of 2 (it is 0 for odd n because
