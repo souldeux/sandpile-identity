@@ -116,6 +116,25 @@ inductive, and VA_y fails two cells from the diagonal. Each round of counterexam
 another true fact that is missing: the reachable states near the midline are a thin set that
 linear inequalities describe poorly, and the rescue rule is itself a disjunction.
 
+**Table invariants (2026-09-28, evening).** Replacing linear facts by exact tables of the (z, δ, A)
+combinations seen in simulations (grains, step into the cell, last-round topples, all bounded
+near the midline; horizontal steps are never needed) works for LA:
+
+- With two small midline tables, TA = (δ_{j−1}, z_j, δ_j, A_j, δ_{j+1}) (37 interior tuples) and
+  TC = (z_j, δ_j, A_j, A_up) (17 tuples), **LA is proven in every midline window**
+  (`tools/table_check.py`, minutes of solver time).
+- The tables themselves are not yet inductive: their next-round values depend on the rows above,
+  and the counterexamples use steep vertical steps two or three rows up that real avalanches never
+  have near the midline (measured: V(y, x) − 2(k − y) is 0 on the midline row but ≤ −1 one row up
+  and ≤ −2 two rows up away from the diagonal; a class-indexed version of that envelope is true
+  but not self-inductive either).
+- `tools/table_cegar.py` automates the repair: a library of 680 table shapes over (z, δ, A) within
+  one cell of anchors on the four rows nearest the midline, mined up to k = 34; each z3
+  counterexample is blocked by a mined table at any anchor of its window. One iteration blocked all
+  123 counterexamples (125 tables), but the next iteration took hours with the larger table set,
+  so it was stopped. State is saved (`cegar_shapes.json`, `cegar_proven.json`, `lib_tabs.json`) and
+  the script resumes; with the proof cache, later iterations only recheck failures.
+
 **Possible next approach: a finite pattern invariant.** Local midline patterns (grains, step and
 recent topples on rows k−1 and k−2, three columns wide) appear to saturate: 376 distinct at
 k = 10, 648 at 22, 705 at 40, 731 at 70. If the set is finite, it could serve as an exact,
