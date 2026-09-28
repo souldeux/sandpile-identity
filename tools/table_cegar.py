@@ -180,7 +180,10 @@ def build_window(prof, shapes, tabs, timeout):
     nx, ncons = w.next_vars(w.R - 2)
     s.add(ncons)
     NT = lambda o: w.NT(nx, o)
+    HYP_R = int(os.environ.get('HYP_R', 2))          # tables assumed only near the window centre (sound)
     for o in w.offs:
+        if max(abs(o[0]), abs(o[1])) > HYP_R:
+            continue
         cl = anchor_cls(o)
         if cl is None:
             continue
@@ -292,7 +295,7 @@ def main():
     cache = json.load(open("cegar_proven.json")) if os.path.exists("cegar_proven.json") else {}
     for it in range(1, 40):
         with mp.Pool(nworkers) as pool:
-            res = pool.map(check, [(p, shapes, tabs, 120, set(cache.get(str(p), []))) for p in profs], chunksize=1)
+            res = pool.map(check, [(p, shapes, tabs, 60, set(cache.get(str(p), []))) for p in profs], chunksize=1)
         for p, _, _, pr in res:
             cache.setdefault(str(p), []).extend(pr)
         json.dump(cache, open("cegar_proven.json", "w"))

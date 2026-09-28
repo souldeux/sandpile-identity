@@ -122,11 +122,19 @@ head-on, and a proof would need an exact description of that collision.
 
 ### Third attempt at a full proof
 
-See **`PROOF-NOTES.md`**. New and rigorous: the claim is *equivalent* to two one-sided statements,
-(U) on the even grid and (M) on the odd grid, via the least action principle applied in both
-directions to explicit Le Borgne–Rossin start piles. Each reduces to an avalanche invariant that
-holds at every round in all tested sizes, one of them tight (E(d) ≤ 2(k − d) − 1). The inductions
-don't close yet: each step needs gradient bounds next to the diagonal.
+See **`PROOF-NOTES.md`**. Rigorous so far:
+
+- The claim is *equivalent* to two one-sided statements about Le Borgne–Rossin avalanches, via the
+  least action principle applied in both directions.
+- **The upper half, (U), is proven for every size**: an inductive invariant of the even-grid
+  avalanche (gradient bounds on the toppling counts), checked by the z3 solver for all k ≥ 8 over
+  symbolic windows, plus direct computation below that (`tools/prove_U.sh`).
+- What is left is the lower bound: **the identity's potential u = L⁻¹e is strictly concave along
+  the row beside the midline** (second difference ≤ −1 at every cell), equivalently (L) in the
+  notes. It holds for every size computed. A two-round avalanche invariant (LA) implies it, and LA
+  is proven given two small tables of the (grains, step, recent topples) patterns that occur on
+  the midline row. Making those tables provably inductive is the open part; the counterexamples
+  so far are states real avalanches never reach, and a solver-driven repair loop is running.
 
 ### The central square is about 5/12 of the width
 

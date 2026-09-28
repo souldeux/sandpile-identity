@@ -77,6 +77,33 @@ follows from
 > **(L)** at the end of the even-grid avalanche, Δa(j) = a(k−1,j−1) − 2a(k−1,j) + a(k−1,j+1) ≥ −1
 > for 0 ≤ j ≤ k−1 (a(k−1,−1) = 0, a(k−1,k) = a(k−1,k−1)).
 
+**Pile-free form of (L) (2026-09-28, late).** Let u = L⁻¹e be the potential of the even identity
+(u = 0 on the sink, e = L·u; u is the odometer of stabilizing e + e). Since D_m = L·W,
+e = L·(W − a), so u = W − a. Along row k−1 the depth is min(j+1, m−j, k) and W(d) = 2kd − d² + d
+has second difference exactly −2 at every cell of that row (including the centre, where
+W(k) − W(k−1) = 2). Hence
+
+> **(L) ⇔ −Δ_x u(k−1, j) ≥ 1 for every j**: the identity's potential is strictly concave along
+> the row next to the midline.
+
+Checked equivalent for k = 2..40; in fact −Δ_x u ∈ {1, 2} there.
+
+The theorem itself has the same shape in potentials: **u_{2k+1} is u_{2k} with its middle row and
+column duplicated into the cross** (checked k = 6, 10 by computing both potentials; this is just
+the README's partial-proof construction V, seen from the potential side). Applying L to
+the duplicated potential gives e_{2k} off the cross, 0 at the centre and −Δ_x u(k−1, j) on the
+cross (the vertical second difference vanishes because the cross equals its neighbours). So the
+whole theorem is: **1 ≤ −Δ_x u_{2k}(k−1, j) ≤ 3 along the row next to the midline**. The upper
+bound is what (U) delivers (g stable); the lower bound is (L).
+
+With δ_u = u(k−1,j) − u(k−2,j) (which is 0 or 1) and the mirror row, e(k−1, j) = −Δ_x u + δ_u, so (L) says a midline cell holds
+more grains than its vertical potential step. The data show the geometry behind it: on the
+midline row the grains are 2 inside the central square (δ_u = 1, bend 1) and mostly 3 outside it
+(δ_u = 1, bend 2), with isolated 2s among the 3s and a few δ_u = 0 cells near the border. Any
+start pile with the same identity gives the same u; for the border pile N·β (β = L·1, N large)
+the odometer is N − u, and its midline row stays convex (second difference ≥ 0 with the sink at N)
+at every round for m ≤ 32, but it only becomes ≥ 1 at the end.
+
 (L) is not a round-by-round invariant (mid-avalanche Δ reaches −2), but this two-round one is,
 and at the end it is exactly (L):
 
@@ -182,3 +209,11 @@ counterexample from the mined pool alone).
 - The rule fails on rectangles taller than ≈1.4× their width, so any proof must use the square.
 - Houdini with timeouts silently drops true facts; the fix was to drop only on real
   counterexamples, or to follow unsat cores.
+- **Static route to (L) (2026-09-28, late).** `tools/static_L.py` asks whether the final state
+  alone forces seams ≥ 1: final odometer on a midline window at a generic arm position, with
+  stability, the proven (U) bounds, mirror symmetry and recurrence (every forbidden subset of the
+  window blocked lazily), optionally plus δ ≤ 1 and s ≥ 1 already established at the columns
+  nearer the border (induction along the row). z3 finds windows with seam 0 in every variant
+  (R = 3, C = 4), and δ ≤ 1 is not forced either. This matches the rectangle experiment: tall
+  rectangles have genuine identities with seam 0, so local facts about one final state cannot
+  suffice; the size information has to come from the avalanche dynamics.
