@@ -5,9 +5,9 @@ equals the identity of the 2k-grid. Verified directly for every k ≤ 128.
 
 **Status (2026-09-28).** The claim is equivalent to two one-sided statements, (U) and (M).
 **(U) is proven for every k** (computer-assisted: an inductive invariant verified symbolically
-by z3 for all k ≥ 8, plus direct computation for k < 8). **(M) is not yet proven**: most of its
-induction goes through, but the cells next to the cross still need a sharper description of the
-avalanche front there.
+by z3 for all k ≥ 8, plus direct computation for k < 8). Given (U), the rest reduces to an
+even-grid statement **(L)** (every seam value ≥ 1), which follows from one two-round invariant,
+**LA**. LA holds on all data but is **not yet proven**; see "What remains".
 
 Notation: m = 2k, n = 2k+1. L is the reduced Laplacian (4 on the diagonal, −1 per neighbour; the sink
 is outside the grid). "Stable" means every value ≤ 3. v_j = (k−1, j) is the quarter cell beside
@@ -68,7 +68,37 @@ the diagonal. Measuring its slack showed it is loose by exactly 1 per step away 
 which collapses to 2(k − y). Earlier attempts (Houdini over thousands of mined templates, and a
 core-guided closure) kept rebuilding pieces of this bound from diagonal-drop couplings.
 
-## (M): in progress
+## What remains: (L), an even-grid statement (replaces (M))
+
+With (U) proven, (M) is not needed. (U) makes g stable, and g is recurrent as soon as every seam
+value s(j) = 2 + Δa(j) is ≥ 1 (the forbidden-subconfiguration argument above). So the theorem
+follows from
+
+> **(L)** at the end of the even-grid avalanche, Δa(j) = a(k−1,j−1) − 2a(k−1,j) + a(k−1,j+1) ≥ −1
+> for 0 ≤ j ≤ k−1 (a(k−1,−1) = 0, a(k−1,k) = a(k−1,k−1)).
+
+(L) is not a round-by-round invariant (mid-avalanche Δ reaches −2), but this two-round one is,
+and at the end it is exactly (L):
+
+> **LA** Δ_t(j) + [T_t(k−1,j) − T_{t−1}(k−1,j)] ≥ −1: the midline row can bend more sharply than
+> −1 only at a cell that toppled in the last round.
+
+Supporting two-round facts, found from z3 counterexamples, all holding at every round for
+k = 2..80 and all tight:
+
+- **VA** T_{t−1}(k−2, j) ≤ T_t(k−1, j) + 1 (the row above, one round ago, is at most one topple
+  ahead of the midline row now). **Proven inductive given VD.**
+- **VD** 2·T(k−2, j) ≤ T(k−1, j−1) + T(k−1, j+1) + 4.
+
+`tools/even_check2.py` (two-round induction, even grid) proves every earlier family plus VA and
+LA at the centre corner, and 436 goals in total. LA and VD still fail along the midline row.
+Their counterexamples are frozen states: a bend of −2 on the midline row with every nearby cell
+holding ≤ 3 grains, so the bend would survive to the end. Real avalanches never do this, but no
+single linear fact found so far rules it out. A core-guided closure over ~6,000 mined midline facts
+(`tools/mid_closure.py`) found no genuine counterexample to LA or VD, but stalled on solver
+timeouts once 20+ supporting facts were in play.
+
+## (M): superseded by (L), kept for the record
 
 Odd-grid avalanche from c_n. At the end, (M) follows from **M\***:
 T(σ_{j−1}) + T(σ_{j+1}) + 2 ≥ 2 T(v_j), because the cross update then gives b(σ_j) ≥ b(v_j).
