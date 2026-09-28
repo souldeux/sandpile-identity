@@ -43,10 +43,26 @@ def la_anchor_ok(k, Y, X):
 MIXED = [
     # VA: T_{t-1}(k-2, j) - T_t(k-1, j) <= 1   (step into the midline row exceeds 1 only after the
     #     cell above toppled), for 0 <= j <= k-2
-    ('VA', lambda k, Y, X: Y == k - 1 and 0 <= X <= k - 2, [((-1, 0), 'prev', 1), ((0, 0), 'now', -1)], 1),
+    # VA_y: T_{t-1}(y-1, x) - T_t(y, x) <= 2(k - y) - 1  (a vertical step is at its maximum only right
+    #       after the cell above toppled); every cell below the diagonal with y >= 1. At y = k-1 this is VA.
+    ('VAy', lambda k, Y, X: 1 <= Y <= k - 1 and 0 <= X <= Y - 1, [((-1, 0), 'prev', 1), ((0, 0), 'now', -1)],
+     ('lin', 2, -2, 0, -1)),
     # VD: 2 T(k-2, j) - T(k-1, j-1) - T(k-1, j+1) <= 4   (i.e. 2V - D <= 4), for 0 <= j <= k-2
     ('VD', lambda k, Y, X: Y == k - 1 and 0 <= X <= k - 2,
      [((-1, 0), 'now', 2), ((0, -1), 'now', -1), ((0, 1), 'now', -1)], 4),
+    # with v = midline row, u = row above:  z = 2 + u + vl + vr - 3v (grains), delta = u - v (step)
+    # P1: a step of 2 forces >= 4 grains:            3u - v - vl - vr <= 6
+    ('P1', lambda k, Y, X: Y == k - 1 and 0 <= X <= k - 2,
+     [((-1, 0), 'now', 3), ((0, 0), 'now', -1), ((0, -1), 'now', -1), ((0, 1), 'now', -1)], 6),
+    # P2: at least one grain:                        3v - u - vl - vr <= 1
+    ('P2', lambda k, Y, X: Y == k - 1 and 0 <= X <= k - 2,
+     [((0, 0), 'now', 3), ((-1, 0), 'now', -1), ((0, -1), 'now', -1), ((0, 1), 'now', -1)], 1),
+    # P3: z <= 2 + 2 delta:                          vl + vr - v - u <= 0
+    ('P3', lambda k, Y, X: Y == k - 1 and 0 <= X <= k - 2,
+     [((0, -1), 'now', 1), ((0, 1), 'now', 1), ((0, 0), 'now', -1), ((-1, 0), 'now', -1)], 0),
+    # P5: a tight cell has a neighbour with step 2:  6v - 2vl - 2vr - ul - ur <= 3   (j <= k-3)
+    ('P5', lambda k, Y, X: Y == k - 1 and 0 <= X <= k - 3,
+     [((0, 0), 'now', 6), ((0, -1), 'now', -2), ((0, 1), 'now', -2), ((-1, -1), 'now', -1), ((-1, 1), 'now', -1)], 3),
 ]
 
 
@@ -126,6 +142,10 @@ def check_window(args):
             if v is None:
                 return None
             acc.append(cf * v)
+        if isinstance(rhs, tuple):
+            _, ck, cy, cx, c0 = rhs
+            Y, X = w.ay + o[0], w.ax + o[1]
+            return sum(acc) <= ck * k + cy * Y + cx * X + c0
         return sum(acc) <= rhs
     for name, pred, terms, rhs in MIXED:
         for o in w.offs:

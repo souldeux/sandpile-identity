@@ -90,8 +90,38 @@ k = 2..80 and all tight:
   ahead of the midline row now). **Proven inductive given VD.**
 - **VD** 2·T(k−2, j) ≤ T(k−1, j−1) + T(k−1, j+1) + 4.
 
+**The mechanism behind LA (from data).** On the midline row, with z = grains and δ = step into
+the row, z_j = 2 + δ_j + Δ_j at every round (the cell below is the mirror). So LA ⇔ z + A ≥ δ + 1,
+and LA carries to the next round unless the cell holds ≤ min(3, δ) grains and neither row
+neighbour topples. In every simulated round (k ≤ 60) the tight states are exactly
+(z, δ, A) = (1, 1, 1), and every one of them has a row neighbour with δ = 2 and ≥ 4 grains,
+which topples next round and rescues it. Only nine (z, δ) pairs ever occur on the midline row:
+(1,0), (2,0), (1,1), (2,1), (3,1), (4,1), (4,2), (5,2), (6,2). Linear facts extracted from this,
+all holding at every round for k ≤ 70:
+
+- **P1** δ = 2 ⇒ z ≥ 4: 3u − v − v_l − v_r ≤ 6
+- **P2** z ≥ 1: 3v − u − v_l − v_r ≤ 1
+- **P3** z ≤ 2 + 2δ: v_l + v_r − v − u ≤ 0
+- **P5** a tight cell has a neighbour with δ = 2: 6v − 2v_l − 2v_r − u_l − u_r ≤ 3 (j ≤ k−3)
+- **VA_y** (generalizes VA to every row) T_{t−1}(y−1, x) − T_t(y, x) ≤ 2(k − y) − 1: a vertical
+  step is at its maximum only right after the cell above toppled. Tight on the midline row.
+
+Also from recurrence alone: at the end VA gives δ ∈ {0, 1}, and a midline cell with 0 grains would
+form a forbidden pair with its mirror, so (L) holds automatically wherever δ = 0.
+
 `tools/even_check2.py` (two-round induction, even grid) proves every earlier family plus VA and
-LA at the centre corner, and 436 goals in total. LA and VD still fail along the midline row.
+LA at the centre corner, and 436 goals in total. With P1–P5 added, LA has no counterexample in
+any window (proven in some, solver timeouts in others), but the P-families and VD are not yet
+inductive, and VA_y fails two cells from the diagonal. Each round of counterexamples has exposed
+another true fact that is missing: the reachable states near the midline are a thin set that
+linear inequalities describe poorly, and the rescue rule is itself a disjunction.
+
+**Possible next approach: a finite pattern invariant.** Local midline patterns (grains, step and
+recent topples on rows k−1 and k−2, three columns wide) appear to saturate: 376 distinct at
+k = 10, 648 at 22, 705 at 40, 731 at 70. If the set is finite, it could serve as an exact,
+non-linear invariant near the midline, combined with the linear families elsewhere. The open
+issue is that row k−2 depends on row k−3, so the pattern region needs a model of its input
+from above. LA and VD still fail along the midline row.
 Their counterexamples are frozen states: a bend of −2 on the midline row with every nearby cell
 holding ≤ 3 grains, so the bend would survive to the end. Real avalanches never do this, but no
 single linear fact found so far rules it out. A core-guided closure over ~6,000 mined midline facts
