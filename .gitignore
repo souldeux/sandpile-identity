@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 *.obj
+tools/*.log
+tools/*.json
+tools/runs/

@@ -1,60 +1,105 @@
 # Odd/even identity theorem: proof notes
 
 **Claim.** For every k ≥ 1, the identity of the (2k+1)-grid with its middle row and column removed
-equals the identity of the 2k-grid. Verified for every k ≤ 128.
+equals the identity of the 2k-grid. Verified directly for every k ≤ 128.
+
+**Status (2026-09-28).** The claim is equivalent to two one-sided statements, (U) and (M).
+**(U) is proven for every k** (computer-assisted: an inductive invariant verified symbolically
+by z3 for all k ≥ 8, plus direct computation for k < 8). **(M) is not yet proven**: most of its
+induction goes through, but the cells next to the cross still need a sharper description of the
+avalanche front there.
 
 Notation: m = 2k, n = 2k+1. L is the reduced Laplacian (4 on the diagonal, −1 per neighbour; the sink
 is outside the grid). "Stable" means every value ≤ 3. v_j = (k−1, j) is the quarter cell beside
 the cross, and σ_j = (k, j) is the cross cell below it (arm cells j = 0..k−1; centre (k, k)).
 
-## Proven
+## The reduction (proven by hand)
 
 1. **Le Borgne–Rossin start pile.** With depth d = distance to the border + 1 and
-   W = 2kd − d² + d, the pile D_m = L_m W is 2 off the corner diagonals and 4(k − d_cell + 1) on
-   them. It differs from the empty pile only by topplings and is ≥ 2, so stab(D_m) = e_m.
+   W = 2kd − d² + d, the pile D_m = L_m W is 2 off the corner diagonals and 4(k − d) on the
+   diagonal cell (d, d). It differs from the empty pile only by topplings and is ≥ 2, so
+   stab(D_m) = e_m.
 2. **Odd start pile.** c_n = (D_m in the four quarters, 2 on the cross, 0 at the centre)
-   = L_n ext(W), where ext copies each row-(k−1) value onto the cross. c_n dominates
-   "2 everywhere, 0 at the centre", which has no forbidden subconfiguration (the extreme cells of
-   any finite set have ≤ 2 neighbours inside it), so stab(c_n) = e_n.
-3. **Reduction (least action principle, both directions).** Let a be the odometer of D_m and b
-   the odometer of c_n.
+   = L_n ext(W), where ext copies each row-(k−1) value onto the cross (checked at the arm ends and
+   the centre too). c_n dominates "2 everywhere, 0 at the centre", which has no forbidden
+   subconfiguration (the extreme cells of any finite set have ≤ 2 neighbours inside it), so
+   stab(c_n) = e_n.
+3. **Least action principle, both directions.** Let a be the odometer of D_m and b of c_n.
    - (U) If the second differences of a along row k−1 are ≤ 1, then g := c_n − L_n ext(a) is
      stable (quarters e_m, arms 2 + Δ_x a, centre 0), so b ≤ ext(a).
-   - (M) If b(σ_j) ≥ b(v_j) for all j, then D_m − L_m b|quarters equals e_n minus nonnegative
-     terms on the cells beside the cross, so it is stable, so b|quarters ≥ a.
-   - Together: b = ext(a), so e_n = g and the claim holds. Conversely the claim implies (U) and
-     (M). **Claim ⇔ (U) ∧ (M).** No recurrence argument is needed on this route.
-4. **(U) from monotonicity.** On row k−1 (j ≤ k−2) the step δ_j = u(k−1,j) − u(k−2,j) equals
-   a(k−2,j) − a(k−1,j) because W agrees on those rows. So (U) follows from
-   (a) a(y−1, x) ≥ a(y, x) below the diagonal. The corner cell j = k−1 has
-   δ = 2 − E(k−1) with E as below, so it follows from E(k−1) ≤ 1.
-5. **Inductive step for (a), parallel rounds** T_{t+1}(p) = ⌊(D(p) + Σ_{q∼p} T_t(q)) / 4⌋:
-   for cells with x ≤ y−2 the Le Borgne–Rossin neighbour matching works (four pairs, the midline
-   pair being an equality by mirror symmetry). For x = y−1 it needs the diagonal inequality
-   (b) E(y−1) + E(y) ≤ D(y−1, y−1) − 2, where E(d) := T(d,d) − T(d,d−1).
-   (b) follows from **E(d) ≤ 2(k − d) − 1**.
-6. **(M) from a lagged invariant.** T_{t+1}(σ_j) ≥ T_t(v_j) for all t implies (M). One induction
-   step reduces it to (S): T_{t−1}(v_{j−1}) + T_{t−1}(v_{j+1}) + 2 ≥ 2 T_t(v_j). The centre obeys
-   T_{t+1}(centre) = T_t(σ_{k−1}) exactly; the j = k−1 case needs that lag worked in (not yet done).
+   - (M) If b(σ_j) ≥ b(v_j) for all j, then D_m − L_m b|quarters is e_n minus nonnegative terms on
+     the cells beside the cross, so it is stable, so b|quarters ≥ a.
+   - Together b = ext(a), so e_n = g: the claim. Conversely the claim implies (U) and (M).
+4. **(U) from monotonicity.** On row k−1 (j ≤ k−2), u(k−1,j) − u(k−2,j) = a(k−2,j) − a(k−1,j)
+   because W agrees on those rows, and s = e − δ ≤ 3 needs δ ≥ 0. At j = k−1, δ = 2 − E(k−1)
+   with E(d) = a(d,d) − a(d,d−1). So (U) follows from **a(y−1, x) ≥ a(y, x) below the diagonal**
+   and **E(k−1) ≤ 1**.
 
-## Verified numerically at every round, not yet proven
+## Proof of (U): an inductive invariant for the avalanche
 
-| Statement | Checked on | Tightness |
-|---|---|---|
-| (a) monotone toward the midline below the diagonal | m = 16, 32, 64, 96 | — |
-| (b) diagonal inequality | m = 16, 32, 64, 96 | min slack 3 |
-| E(d) ≤ 2(k − d) − 1 | every m ≡ 0 mod 4, 8..100 | min slack 0 (tight) |
-| lagged (M) and (S) | n = 17, 33, 49, 65, 97 | — |
-| final (U): second differences of a on row k−1 ∈ {−1, 0} | every even m, 4..128 | — |
+Parallel rounds from T = 0: T′(p) = ⌊(D(p) + Σ_{q∼p} T(q)) / 4⌋. They increase to the odometer a.
+On the triangle 0 ≤ x < y ≤ k−1 (the rest follows by symmetry), with T(y, −1) = 0:
 
-## Where it is stuck
+| Family | Statement |
+|---|---|
+| H0 | T(y, x+1) − T(y, x) ≥ 0 |
+| H1 | T(y, x+1) − T(y, x) ≤ 2(k − x) − 3, for −1 ≤ x ≤ y−1 (so T(y,0) ≤ 2k−1, and E(d) ≤ 2(k−d)−1) |
+| V0 | T(y−1, x) − T(y, x) ≥ 0 |
+| V1′ | T(y−1, x) − T(y, x) ≤ 2(k − y) |
+| C≥0 | every cell holds ≥ 0 grains: D + Σ_{nbrs} T − 4T ≥ 0 |
 
-- Proving E(d) ≤ 2(k − d) − 1 inductively reduces, after the floor algebra, to
-  (a − q) + (a − r) ≤ 2(k − d) − 4 with a = T(d,d−1), q = T(d+1,d−1), r = T(d,d−2):
-  a bound on the vertical plus horizontal steps beside the diagonal. Those need their own
-  inductive bounds; whether the chain closes is unknown.
-- (S) needs a lower bound on the row-(k−1) second differences at intermediate rounds, but those
-  reach −2 mid-avalanche (only the final state has {−1, 0}), so (S) must get its slack from the
-  lag between σ and v. No closed invariant found yet.
-- Not true on rectangles taller than ≈1.4× their width, so any proof must use the square shape;
-  in this framework that enters through the diagonal stacks meeting at the centre.
+- **Base.** All hold at T = 0.
+- **C≥0 is inductive** by monotonicity: it says T ≤ F(T) for the monotone round map F.
+- **The others** are inductive by `tools/check_invariants.py` (with VFORM=ky): for each target
+  family and each of 1,500 window profiles (distance of the cell to the top, left edge, diagonal
+  and midline, each either exact or "≥ n"), z3 finds no integer state satisfying every family
+  instance inside the window whose next round violates the target. k is symbolic (k ≥ 8), so each
+  UNSAT covers every grid. The floor is encoded exactly (4n ≤ S ≤ 4n + 3, n integer).
+- **Sanity checks, all passing:** the hypotheses are satisfiable in every window (VACUITY=1), and
+  real avalanche states from simulations satisfy every window constraint and goal at many rounds
+  (ENCODE_TEST=1). The families also hold at every round for every even m from 4 to 140.
+- **Conclusion.** At the odometer, V0 gives the monotonicity and H1 at the diagonal gives
+  E(k−1) ≤ 1, so (U) holds for all k ≥ 8. Smaller k are covered by the direct verification.
+
+To re-run everything: `tools/prove_U.sh`.
+
+**How V1′ was found.** The first vertical bound, 2k − x − y − 1, holds but is not inductive near
+the diagonal. Measuring its slack showed it is loose by exactly 1 per step away from the diagonal,
+which collapses to 2(k − y). Earlier attempts (Houdini over thousands of mined templates, and a
+core-guided closure) kept rebuilding pieces of this bound from diagonal-drop couplings.
+
+## (M): in progress
+
+Odd-grid avalanche from c_n. At the end, (M) follows from **M\***:
+T(σ_{j−1}) + T(σ_{j+1}) + 2 ≥ 2 T(v_j), because the cross update then gives b(σ_j) ≥ b(v_j).
+Families checked at every round for every odd n from 5 to 141: the quarter families above
+(V1′ included), C0 σ_j ≤ v_j, C1 v_j − σ_j ≤ 1, M\*, centre ≤ σ_{k−1}, and C≥0.
+What is established so far (`tools/odd_check2.py`, a **two-round** induction: families at rounds
+t−1 and t plus the exact parallel step between them imply the families at t+1; base rounds 0 and 1
+checked by hand, since round 1 is explicit: diagonal cell (d, d) has k − d topples, all else 0):
+
+- 548 family goals are proven across the 135 odd-grid window profiles, including **M\* in every
+  cross window** and CU2 below.
+- New families found by measuring slack, both holding at every round for k up to 80 on both grids:
+  **H2: H(y, x) ≤ 2k − x − y − 2** (equal to k − x − 1 on the midline row; the horizontal
+  counterpart of V1′) and **CU2: T(k−2, x) − σ_x ≤ 2** (the drop from two rows up down to the
+  cross; on the even grid this is V1′ at the midline).
+- The partner bound Vd is restricted to d ≤ k − 2 on the odd grid (at d = k − 1 the cell below the
+  diagonal is a cross cell, covered by C1).
+
+Still failing, all next to the cross: C0 (σ_x ≤ v_x) in most cross windows, V1′ in the row just
+above the cross, and H2 in two windows. The counterexamples are avalanche fronts that are far
+steeper along the row above the cross than real ones (steps of about k − x near the border,
+where real steps are about k/2). The linear step bounds are tight next to the diagonal but loose
+near the border, and the cross region needs that gap closed. Two approaches tried and shelved:
+Houdini over mined templates (too slow with 135 windows) and a parallel core-guided closure
+(`tools/odd_closure.py`; it banned the targets on solver timeouts, and C0 has a genuine
+counterexample from the mined pool alone).
+
+## Dead ends worth remembering
+
+- Round-by-round, row-(k−1) second differences reach ±2 mid-avalanche, so invariants about the
+  final shape alone don't induct.
+- The rule fails on rectangles taller than ≈1.4× their width, so any proof must use the square.
+- Houdini with timeouts silently drops true facts; the fix was to drop only on real
+  counterexamples, or to follow unsat cores.
