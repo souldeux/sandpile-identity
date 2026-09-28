@@ -4,3 +4,4 @@ __pycache__/
 tools/*.log
 tools/*.json
 tools/runs/
+tools/*.err
