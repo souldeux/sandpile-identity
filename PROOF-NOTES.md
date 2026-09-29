@@ -230,3 +230,12 @@ counterexample from the mined pool alone).
   (R = 3, C = 4), and δ ≤ 1 is not forced either. This matches the rectangle experiment: tall
   rectangles have genuine identities with seam 0, so local facts about one final state cannot
   suffice; the size information has to come from the avalanche dynamics.
+- **Far-field probe (2026-09-28, late).** Can the input to a midline band be described exactly?
+  `tools/farfield_probe.py` compares the square's LBR avalanche with a long rectangle's (same width,
+  height 2k + 2t, identical start pile on rows 0..k−1; Le Borgne–Rossin showed the long rectangle's
+  avalanche never reaches its middle). They differ on every row from round 3 on (the difference
+  moves up one row per round), and at the end by up to 1084 at k = 64 (≈ k²/4), falling off
+  roughly linearly with distance from the midline. The difference field is smooth at large scale
+  but its steps jitter by ±1–2, so it is not an explicit function either. The midline influences
+  the whole quarter almost at once; there is no bounded band with known input. This closes the
+  band-invariant route.

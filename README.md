@@ -49,11 +49,12 @@ compiled: 512×512 in 101 s (12.2 billion topples). Raw outputs are in `data/`.
 
 On a (2k+1)-grid the identity has a cross of lower values on its middle row and column (1s through
 the square, 0 at the centre). **Delete the cross and the remaining cells equal the 2k identity
-exactly.** Checked for every k from 2 to 128 (odd sides 5–257): zero mismatched cells
-(`data/seam_2_128.csv`, column `quadrant_bad`).
+exactly.** Checked for every k from 2 to 256 (odd sides 5–513): zero mismatched cells
+(`data/seam_2_128.csv`, `data/seam_129_256.csv`, column `quadrant_bad`), and also for 1025 against
+1024 (`data/seam_512.csv`). The larger checks used `tools/sandid.exe seam` in 13 parallel runs, about an hour.
 
 My first guess for the cross, "neighbour minus 1", is wrong: it fails somewhere on the cross for
-30 of those 127 sizes. The
+30 of the 127 sizes up to 257, and for 32 of the 128 sizes from 259 to 513. The
 correct description is from the toppling counts. With `u = a1 − a2` the net toppling counts of
 the 2k identity computation (`e = L u`), the cross value at column j is the second difference
 `2u(j) − u(j−1) − u(j+1)` along the row beside the midline, and the centre is 0. This matched the
@@ -133,8 +134,10 @@ See **`PROOF-NOTES.md`**. Rigorous so far:
   the row beside the midline** (second difference ≤ −1 at every cell), equivalently (L) in the
   notes. It holds for every size computed. A two-round avalanche invariant (LA) implies it, and LA
   is proven given two small tables of the (grains, step, recent topples) patterns that occur on
-  the midline row. Making those tables provably inductive is the open part; the counterexamples
-  so far are states real avalanches never reach, and a solver-driven repair loop is running.
+  the midline row. Making those tables provably inductive failed: a solver-driven repair loop grew
+  them from 125 to 668 without closing, because the band near the midline depends on rows above it
+  that have no exact description (`tools/farfield_probe.py`). Facts about the final pile alone
+  don't suffice either (`tools/static_L.py`). The missing half needs a new idea.
 
 ### The central square is about 5/12 of the width
 

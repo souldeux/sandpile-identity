@@ -94,8 +94,9 @@ footer{font-family:var(--mono); font-size:12px; color:var(--muted)}
 .notebook > header{max-width:40rem}
 .notebook section{display:flex; flex-direction:column; gap:14px}
 .notebook h3{font-family:var(--serif); font-size:22px; font-weight:500; line-height:1.25; text-wrap:balance}
-.notebook section > p, .notebook section > ol{margin:0; max-width:38rem}
-.notebook ol{padding-left:1.3em; display:flex; flex-direction:column; gap:6px}
+.notebook section > p, .notebook section > ol, .notebook section > ul{margin:0; max-width:38rem}
+.notebook ol, .notebook ul{padding-left:1.3em; display:flex; flex-direction:column; gap:6px}
+.notebook strong{font-weight:500}
 .pair{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; max-width:640px}
 .pair figure{margin:0; display:flex; flex-direction:column; gap:6px}
 .pair .mini{aspect-ratio:1; background:#141a33; border:1px solid var(--rule); display:grid; place-items:center; overflow:hidden}
@@ -238,7 +239,7 @@ details summary{cursor:pointer}
 
     <section>
       <h3>Odd grids contain the even grid one size down</h3>
-      <p>On a grid with an odd side, the identity has a cross of smaller values along its middle row and column, with a single empty cell at the centre. Delete that cross and push the four quarters together. What remains is exactly the identity of the even grid one size smaller, cell for cell. I checked every odd size from 5 to 257 and found no exceptions. You can check any size up to 129 here.</p>
+      <p>On a grid with an odd side, the identity has a cross of smaller values along its middle row and column, with a single empty cell at the centre. Delete that cross and push the four quarters together. What remains is exactly the identity of the even grid one size smaller, cell for cell. I checked every odd size from 5 to 513, and 1025 as well, and found no exceptions. You can check any size up to 129 here.</p>
       <div class="pairctl">
         <label for="pk">Pair</label>
         <input type="range" id="pk" min="4" max="64" value="31">
@@ -253,7 +254,15 @@ details summary{cursor:pointer}
       <p>The missing piece is that bound on the toppling counts. For every odd size from 5 to 129 I computed them directly: they are always 1 or 2, and they match the real identity's cross exactly. Proving the bound would need control of the toppling counts, which is the same kind of problem that keeps the scaling limit open.</p>
       <p>Rectangles show that the bound is doing real work. Take a rectangle with an odd width, delete its middle column, and compare with the rectangle one column narrower. The two identities match on every height up to about 1.4 times the width and differ on every height beyond it. Where they differ, the construction above is what breaks. The values it puts on the middle column drop to 0 in two places with only 1s between them, and that stretch stops its pile from being recurrent. Checking for that pattern predicted the outcome correctly for all 900 rectangles I tested. So symmetry alone cannot prove the square case. A proof has to show that squares stay on the safe side of this threshold.</p>
       <p>Le Borgne and Rossin’s method gives a sharper way to state what is missing. They start from an explicit pile that differs from the empty pile only by topplings: 2 grains on every cell, plus tall stacks along the four corner diagonals. Stabilizing it produces the identity. Rebuilt here, their avalanche reproduces the identity exactly, and the missing bound turns into a statement about how often its cells topple. On the row beside the midline those counts would need to be concave, with the slope never dropping by more than 1 from one cell to the next. On a 32-wide grid the counts along that row are 8, 15, 22, …, 71, then 77, 82, 86, 89, 91, 92. The slope stays at 7 and then drops by exactly 1 at each step. That pattern holds on every even size from 4 to 128, and it would be enough to finish the proof.</p>
-      <p>I could not prove it. Their own arguments show that toppling counts decrease along lines, which is a first-order fact. Concavity is second-order, and rounding down to whole topplings can break it, so their step-by-step induction does not carry over. The pattern also appears on this one row only, where the avalanches from the top-left and bottom-left corners meet head-on. Every other row is irregular, so there is no grid-wide property to build an induction on. Closing the gap would take an exact description of that collision.</p>
+      <p>Their own arguments do not settle it. They show that toppling counts decrease along lines, which is a first-order fact. The bound is second-order, and rounding down to whole topplings can break it, so their step-by-step induction does not carry over directly.</p>
+      <p><strong>Update, 28 September: half of it is proven.</strong> The bound has two sides, and the upper one is now proven for every size: the cross values never exceed 3. The proof is computer-assisted. It uses a handful of inequalities on the toppling counts that hold at the start, survive every round of the avalanche, and imply the upper side at the end. The inequalities limit how much a count can change from one cell to the next, sideways and vertically. The Z3 solver checked that they survive a round for all grid sizes at once, by reasoning about small windows with symbolic positions; the smallest grids are checked directly. The key inequality was found by measuring how much room the true counts leave, not by guessing.</p>
+      <p>The lower side, cross values of at least 1, is still open. It can be stated without Le Borgne and Rossin’s pile. Let u be the identity’s potential, the unique function on the grid, zero outside it, whose Laplacian is the identity. The claim is that u is strictly concave along the row beside the midline, with a second difference of at most −1 at every cell. Three attempts to close it failed, and each failure says something:</p>
+      <ul>
+        <li><strong>The final pile alone is not enough.</strong> Stability, recurrence, symmetry and the proven upper side still allow local patterns with a 0 on the cross. Tall rectangles really have such patterns, so any proof has to use the square’s size.</li>
+        <li><strong>A round-by-round argument near the midline almost works.</strong> The bound follows from two small tables of the patterns that actually occur on the midline row. Keeping those tables true from round to round needs information about the rows above, though, and a solver-guided search for more tables grew from 125 to 668 without closing.</li>
+        <li><strong>The rows above have no simple description.</strong> In a long rectangle, Le Borgne and Rossin’s avalanche never reaches the middle. Compared with that, the square’s avalanche starts to differ on the midline row within three rounds, and the difference climbs one row per round until it reaches every row. Its size is irregular, so it cannot serve as a known input either.</li>
+      </ul>
+      <p>So the missing half needs a new idea about how the avalanches from the four corners meet, not more computation.</p>
     </section>
 
     <section>
