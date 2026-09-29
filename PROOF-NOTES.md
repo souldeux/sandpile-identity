@@ -161,6 +161,19 @@ near the midline; horizontal steps are never needed) works for LA:
   123 counterexamples (125 tables), but the next iteration took hours with the larger table set,
   so it was stopped. State is saved (`cegar_shapes.json`, `cegar_proven.json`, `lib_tabs.json`) and
   the script resumes; with the proof cache, later iterations only recheck failures.
+- Localizing the hypotheses (tables assumed only within Chebyshev radius 2 of the window centre,
+  `HYP_R=2`) made an iteration cheaper (97 min on 15 cores) but much weaker: 66 of 77 windows
+  failed with 884 counterexamples, 180 of them excluded only by tables already in the set at
+  anchors that were no longer assumed. LA itself had no counterexample. Back to full hypotheses;
+  proofs cached under fewer hypotheses remain valid.
+- With full hypotheses the resumed iteration (71 min) was just as bad: 66 windows failing, 891
+  counterexamples, LA still never failing. Blocking added 543 tables (125 → 668) and left 348
+  counterexamples that no library table excludes, almost all on rows 1–3 above the midline
+  (classes (1..3, 2, 3)). **The band-table CEGAR is diverging, so it was stopped.** Reading: each
+  row's table needs a model of the row above, the library only reaches row 3, and the proven linear
+  bounds from (U) get looser, not tighter, with distance from the midline, so nothing closes the
+  chain from above. A finite band invariant would need an exact far-field description (how the
+  avalanche from the diagonal stacks arrives at the band), not more local patterns.
 
 **Possible next approach: a finite pattern invariant.** Local midline patterns (grains, step and
 recent topples on rows k−1 and k−2, three columns wide) appear to saturate: 376 distinct at
